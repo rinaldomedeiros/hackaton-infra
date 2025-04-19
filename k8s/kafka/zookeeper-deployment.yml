@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zookeeper
+  labels:
+    app: kafka
+    component: zookeeper
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka
+      component: zookeeper
+  template:
+    metadata:
+      labels:
+        app: kafka
+        component: zookeeper
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: zookeeper
+        image: bitnami/zookeeper:3.9
+        env:
+        - name: ALLOW_ANONYMOUS_LOGIN
+          value: "yes"
+        ports:
+        - containerPort: 2181
