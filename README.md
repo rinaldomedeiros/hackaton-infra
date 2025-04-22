@@ -1,10 +1,10 @@
 # Projeto Hackaton Infra
 
-Este README traz o **fluxo mínimo** para rodar localmente a aplicação **Producer** em um cluster Kubernetes (Minikube), usando o script de deploy já preparado.
+Este README traz o **fluxo mínimo** para rodar localmente o cluster kubernetes com as aplicações e serviços relacionados a entrega techchallenge hackaton fase 5
 
 ---
 
-## Pré‑requisitos
+## Pré‑requisitos Geraus
 
 - Java 17 e Maven
 - Docker (Desktop)
@@ -14,57 +14,78 @@ Este README traz o **fluxo mínimo** para rodar localmente a aplicação **Produ
 
 ## Passos
 
-1. **Clonar o repositório**
-   ```bash
-   git clone [https://<seu-repo>/hackaton-producer.git](https://github.com/rinaldomedeiros/hackaton-producer)
-   cd hackaton-producer
-   ```
+Pré-requisitos para execução do projeto
 
-2. **Buildar o JAR e a imagem Docker**
-   ```bash
-   mvn clean package -DskipTests
-   docker build -t hackaton-producer-myapp:latest .
-   ```
+1️⃣ Instalação do Minikube
 
-3. **Executar o script de deploy**
-   ```bash
-   # dê permissão se necessário e rode:
-   chmod +x scripts/deploy.sh
-   cd scripts
-   ./deploy.sh
-   ```
-   O `deploy.sh` vai:
-   - Iniciar Minikube (com metrics‑server)
-   - Carregar sua imagem para o cluster
-   - Aplicar PostgreSQL, Zookeeper, Kafka e a aplicação
-   - Aguardar todos os componentes ficarem prontos
+Baixe o Minikube em: https://minikube.sigs.k8s.io/docs/start/
 
-4. **Acessar a aplicação**
+Para sistemas Unix-like com Docker:
 
-   - **Port‑forward** (recomendado):
-     ```bash
-     kubectl port-forward svc/myapp-service 8080:8080
-     ```
-     Então abra outra aba e execute:
-     ```bash
-     curl http://localhost:8080/videos
-     ```
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+sudo install minikube-linux-amd64 /usr/local/bin/minikube
 
-   - **NodePort** (se preferir):
-     ```bash
-     curl http://$(minikube ip):30080/videos
-     ```
+Em seguida, verifique:
 
----
+minikube version
 
-## Limpeza de recursos
+2️⃣ Inicialização do Minikube
 
-Para remover o cluster e apagar tudo:
-```bash
-minikube delete
-```
+minikube start --driver=docker
+minikube addons enable metrics-server
 
----
+3️⃣ Build das Imagens Locais
 
-Pronto! Com esses passos você terá a **Producer** rodando em Minikube de forma rápida e automatizada.    
+É necessário gerar o JAR antes de criar a imagem. Para cada projeto (producer, consumer e gateway), siga estes passos dentro da pasta correspondente:
+
+# Producer
+cd ../producer
+mvn clean package -DskipTests
+ls target/producer-0.0.1-SNAPSHOT.jar
+docker build -t hackaton-producer:latest .
+
+# Consumer
+cd ../consumer
+mvn clean package -DskipTests
+ls target/consumer-0.0.1-SNAPSHOT.jar
+docker build -t hackaton-consumer:latest .
+
+# Gateway
+cd ../gateway
+mvn clean package -DskipTests
+ls target/gateway-0.0.1-SNAPSHOT.jar
+docker build -t hackaton-gateway:latest .
+
+# Voltar para a pasta de scripts para o deploy
+cd ../scripts
+
+4️⃣ Deploy da aplicação
+
+Execute o script a seguir para aplicar todos os manifests:
+
+chmod +x deploy.sh
+./deploy.sh
+
+5️⃣ Validação dos Pods
+
+Após o deploy, valide que todos os pods estão no status Running:
+
+kubectl get pods -o wide
+
+Verifique também serviços, HPA e endpoints com:
+
+kubectl get svc,hpa
+
+Você deve ver as aplicações producer, consumer, gateway, redis, kafka, zookeeper e postgres com seus respectivos serviços e pods disponíveis.
+
+6️⃣ Port-forward
+
+O script já realiza um port-forward do serviço gateway:
+
+kubectl port-forward svc/gateway-service 30090:8080
+
+Depois disso, acesse a aplicação com:
+
+curl -v http://localhost:30090/producer/videos
+
 
