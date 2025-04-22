@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-registration
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-registration
+  template:
+    metadata:
+      labels:
+        app: postgres-registration
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16.2
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: userservice
+            - name: POSTGRES_PASSWORD
+              value: P0o9i8u7
+            - name: POSTGRES_DB
+              value: user_service
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgres-registration-storage
+      volumes:
+        - name: postgres-registration-storage
+          persistentVolumeClaim:
+            claimName: postgres-registration-pvc
+

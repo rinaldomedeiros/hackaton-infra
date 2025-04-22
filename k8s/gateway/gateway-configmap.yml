@@ -13,12 +13,13 @@ data:
         gateway:
           routes:
             - id: route-consumer
-              uri: http://consumer:8081
+              uri: http://consumer:8080
               predicates:
                 - Path=/consumer/**
               filters:
                 - PreserveHostHeader
                 - RemoveRequestHeader=Cookie
+
             - id: route-producer
               uri: http://producer:8080
               predicates:
@@ -26,6 +27,23 @@ data:
               filters:
                 - PreserveHostHeader
                 - RemoveRequestHeader=Cookie
+
+            - id: route-security
+              uri: http://security:8080
+              predicates:
+                - Path=/security/**
+              filters:
+                - PreserveHostHeader
+                - RemoveRequestHeader=Cookie
+
+            - id: route-registration
+              uri: http://registration:8080
+              predicates:
+                - Path=/registration/**
+              filters:
+                - PreserveHostHeader
+                - RemoveRequestHeader=Cookie
+
     logging:
       level:
         root: DEBUG
