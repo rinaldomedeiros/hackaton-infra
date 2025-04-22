@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-config
+data:
+  application.yml: |
+    server:
+      port: 8080
+    spring:
+      application:
+        name: gateway
+      cloud:
+        gateway:
+          routes:
+            - id: route-consumer
+              uri: http://consumer:8081
+              predicates:
+                - Path=/consumer/**
+              filters:
+                - PreserveHostHeader
+                - RemoveRequestHeader=Cookie
+            - id: route-producer
+              uri: http://producer:8080
+              predicates:
+                - Path=/producer/**
+              filters:
+                - PreserveHostHeader
+                - RemoveRequestHeader=Cookie
+    logging:
+      level:
+        root: DEBUG

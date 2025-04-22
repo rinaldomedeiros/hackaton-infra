@@ -1,49 +1,84 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Determina automaticamente onde está este script
+# Determina onde está o k8s
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 K8S_DIR="$SCRIPT_DIR/../k8s"
 
-echo "⏳ Iniciando Minikube..."
-minikube start
-minikube addons enable metrics-server
+# 0️⃣ Cache e carga das imagens no Minikube
+# 0.1️⃣ Cache das imagens para startups futuras (requer minikube restart)
+echo "⏳ Cacheando imagens no Minikube..."
+minikube cache add postgres:16.2
+minikube cache add bitnami/zookeeper:3.9
+minikube cache add bitnami/kafka:3.5
+minikube cache add redis:latest
+minikube cache add registry.k8s.io/metrics-server/metrics-server:v0.7.2
+minikube cache add hackaton-producer:latest
+minikube cache add hackaton-consumer:latest
+minikube cache add hackaton-gateway:latest
 
-echo "⏳ Carregando imagem da aplicação no Minikube..."
-minikube image load hackaton-producer-myapp:latest
+# 0.2️⃣ Carga imediata das imagens para o runtime atual
+echo "⏳ Carregando todas as imagens no Minikube..."
+minikube image load postgres:16.2
+minikube image load bitnami/zookeeper:3.9
+minikube image load bitnami/kafka:3.5
+minikube image load redis:latest
+minikube image load registry.k8s.io/metrics-server/metrics-server:v0.7.2
+minikube image load hackaton-producer:latest
+minikube image load hackaton-consumer:latest
+minikube image load hackaton-gateway:latest
 
-# 1️⃣ Deploy do PostgreSQL
-echo "🚀 Aplicando manifests do PostgreSQL..."
+# 3️⃣ Deploy do PostgreSQL
+echo "🚀 Aplicando Postgres..."
 kubectl apply -f "$K8S_DIR/postgres"
-echo "⏳ Aguardando Postgres ficar Ready..."
 kubectl --request-timeout=0 rollout status deployment/postgres-deployment --timeout=120s
 
-# 2️⃣ Deploy do Zookeeper
-echo "🚀 Aplicando manifests do Zookeeper..."
+# 4️⃣ Deploy do Zookeeper
+echo "🚀 Aplicando Zookeeper..."
 kubectl apply -f "$K8S_DIR/kafka/zookeeper-deployment.yml" \
                -f "$K8S_DIR/kafka/zookeeper-service.yml"
-echo "⏳ Aguardando Pod do Zookeeper ficar Ready (até 5m)..."
 kubectl --request-timeout=0 wait \
-  --for=condition=ready pod -l app=kafka,component=zookeeper \
-  --timeout=300s
+  --for=condition=ready pod -l app=kafka,component=zookeeper --timeout=300s
 
-# 3️⃣ Deploy do Kafka Broker
-echo "🚀 Aplicando manifests do Kafka broker..."
+# 5️⃣ Deploy do Kafka Broker
+echo "🚀 Aplicando Kafka..."
 kubectl apply -f "$K8S_DIR/kafka/kafka-deployment.yml" \
                -f "$K8S_DIR/kafka/kafka-service.yml"
-echo "⏳ Aguardando Pod do Kafka broker ficar Ready (até 5m)..."
 kubectl --request-timeout=0 wait \
-  --for=condition=ready pod -l app=kafka,component=broker \
-  --timeout=300s
+  --for=condition=ready pod -l app=kafka,component=broker --timeout=300s
 
-# 4️⃣ Deploy da aplicação
-echo "🚀 Aplicando manifests da aplicação MyApp..."
-kubectl apply -f "$K8S_DIR/myapp"
-echo "⏳ Aguardando MyApp ficar Ready..."
-kubectl --request-timeout=0 rollout status deployment/myapp-deployment --timeout=120s
+# 6️⃣ Deploy do Redis
+echo "🚀 Aplicando Redis..."
+kubectl apply -f "$K8S_DIR/redis"
+# Aguarda rollout do Deployment
+kubectl --request-timeout=0 rollout status deployment/redis --timeout=120s
+# Aguarda pods de Redis ficarem prontos
+kubectl --request-timeout=0 wait \
+  --for=condition=ready pod -l app=redis --timeout=300s
 
-# 5️⃣ Resumo final
+# 7️⃣ Deploy do Consumer
+echo "🚀 Aplicando Consumer..."
+kubectl apply -f "$K8S_DIR/consumer"
+kubectl --request-timeout=0 rollout status deployment/consumer --timeout=120s
+kubectl --request-timeout=0 apply -f "$K8S_DIR/consumer/consumer-hpa.yml"
+kubectl --request-timeout=0 wait \
+  --for=condition=ready pod -l app=consumer --timeout=300s
+
+# 8️⃣ Deploy do Producer
+echo "🚀 Aplicando Producer..."
+kubectl apply -f "$K8S_DIR/producer"
+kubectl --request-timeout=0 rollout status deployment/producer-deployment --timeout=120s
+
+# 9️⃣ Deploy do Gateway
+echo "🚀 Aplicando Gateway..."
+kubectl apply -f "$K8S_DIR/gateway"
+kubectl --request-timeout=0 rollout status deployment/gateway --timeout=120s
+
+# 🔟 Resumo final
 echo
 kubectl get pods,svc,hpa
 echo
-echo "✅ Deploy completo! Acesse em: http://$(minikube ip):30080"
+echo "✅ Deploy completo!"
+
+echo "⏳ Iniciando Port-Forward: localhost:8080 -> gateway-service:8080"
+kubectl port-forward svc/gateway-service 30090:8080
