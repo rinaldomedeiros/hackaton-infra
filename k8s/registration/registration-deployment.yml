@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registration
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: registration
+  template:
+    metadata:
+      labels:
+        app: registration
+    spec:
+      containers:
+        - name: registration
+          image: hackaton-registration:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgres-registration:5432/user_service
+            - name: SPRING_DATASOURCE_USERNAME
+              value: userservice
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: P0o9i8u7
