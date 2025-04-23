@@ -112,5 +112,6 @@ Depois disso, acesse a aplicação via curl ou chamada localhost na porta config
 curl -v http://localhost:30090/producer/videos
 
 
+## 📊 Arquitetura do Projeto
 
-
+![Diagrama da arquitetura](./assets/arquitetura.png)
