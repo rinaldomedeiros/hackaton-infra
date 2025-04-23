@@ -4,7 +4,13 @@ Este README traz o **fluxo mínimo** para rodar localmente o cluster kubernetes 
 
 ---
 
-## Pré‑requisitos Geraus
+## Arquitetura do Projeto
+
+![Diagrama da arquitetura](./assets/arquitetura.png)
+
+---
+
+## Pré‑requisitos Gerais
 
 - Java 17 e Maven
 - Docker (Desktop)
